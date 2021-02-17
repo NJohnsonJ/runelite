@@ -49,6 +49,7 @@ import static net.runelite.api.ObjectID.ORE_VEIN_26661;
 import static net.runelite.api.ObjectID.ORE_VEIN_26662;
 import static net.runelite.api.ObjectID.ORE_VEIN_26663;
 import static net.runelite.api.ObjectID.ORE_VEIN_26664;
+import static net.runelite.api.HintArrowType.WORLD_POSITION;
 import net.runelite.api.Player;
 import net.runelite.api.WallObject;
 import net.runelite.api.coords.WorldPoint;
@@ -247,7 +248,7 @@ public class MiningPlugin extends Plugin
 			{
 				final WorldPoint point = object.getWorldLocation();
 				respawns.removeIf(rockRespawn -> rockRespawn.getWorldPoint().equals(point));
-				client.clearHintArrow();
+				clearDaeyaltHintArrow(object);
 			}
 			else
 			{
@@ -255,6 +256,12 @@ public class MiningPlugin extends Plugin
 				respawns.add(rockRespawn);
 			}
 		}
+	}
+
+	private void clearDaeyaltHintArrow(GameObject object)
+	{
+		if (client.getHintArrowType() == WORLD_POSITION && client.getHintArrowPoint().equals(object.getWorldLocation()))
+			client.clearHintArrow();
 	}
 
 	@Subscribe
