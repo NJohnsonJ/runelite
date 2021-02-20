@@ -39,6 +39,7 @@ import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
 import net.runelite.api.GameObject;
 import net.runelite.api.GameState;
+import static net.runelite.api.HintArrowType.WORLD_POSITION;
 import net.runelite.api.MenuAction;
 import static net.runelite.api.ObjectID.DEPLETED_VEIN_26665;
 import static net.runelite.api.ObjectID.DEPLETED_VEIN_26666;
@@ -49,7 +50,6 @@ import static net.runelite.api.ObjectID.ORE_VEIN_26661;
 import static net.runelite.api.ObjectID.ORE_VEIN_26662;
 import static net.runelite.api.ObjectID.ORE_VEIN_26663;
 import static net.runelite.api.ObjectID.ORE_VEIN_26664;
-import static net.runelite.api.HintArrowType.WORLD_POSITION;
 import net.runelite.api.Player;
 import net.runelite.api.WallObject;
 import net.runelite.api.coords.WorldPoint;
@@ -134,6 +134,7 @@ public class MiningPlugin extends Plugin
 		pickaxe = null;
 		overlayManager.remove(overlay);
 		overlayManager.remove(rocksOverlay);
+		respawns.forEach(respawn -> clearHintArrowAt(respawn.getWorldPoint()));
 		respawns.clear();
 	}
 
@@ -201,7 +202,7 @@ public class MiningPlugin extends Plugin
 	@Subscribe
 	public void onGameTick(GameTick gameTick)
 	{
-		respawns.removeIf(RockRespawn::isExpired);
+		clearExpiredRespawns();
 		recentlyLoggedIn = false;
 
 		if (session == null || session.getLastMined() == null)
@@ -224,6 +225,24 @@ public class MiningPlugin extends Plugin
 		}
 	}
 
+	/**
+	 * Clears expired respawns and removes the hint arrow from expired Daeyalt essence rocks.
+	 */
+	private void clearExpiredRespawns()
+	{
+		respawns.removeIf(rockRespawn ->
+		{
+			final boolean expired = rockRespawn.isExpired();
+
+			if (expired && rockRespawn.getRock() == Rock.DAEYALT_ESSENCE)
+			{
+				clearHintArrowAt(rockRespawn.getWorldPoint());
+			}
+
+			return expired;
+		});
+	}
+
 	public void resetSession()
 	{
 		session = null;
@@ -244,24 +263,27 @@ public class MiningPlugin extends Plugin
 		Rock rock = Rock.getRock(object.getId());
 		if (rock != null)
 		{
+			final WorldPoint point = object.getWorldLocation();
+
 			if (rock == Rock.DAEYALT_ESSENCE)
 			{
-				final WorldPoint point = object.getWorldLocation();
 				respawns.removeIf(rockRespawn -> rockRespawn.getWorldPoint().equals(point));
-				clearDaeyaltHintArrow(object);
+				clearHintArrowAt(point);
 			}
 			else
 			{
-				RockRespawn rockRespawn = new RockRespawn(rock, object.getWorldLocation(), Instant.now(), (int) rock.getRespawnTime(region).toMillis(), rock.getZOffset());
+				RockRespawn rockRespawn = new RockRespawn(rock, point, Instant.now(), (int) rock.getRespawnTime(region).toMillis(), rock.getZOffset());
 				respawns.add(rockRespawn);
 			}
 		}
 	}
 
-	private void clearDaeyaltHintArrow(GameObject object)
+	private void clearHintArrowAt(WorldPoint worldPoint)
 	{
-		if (client.getHintArrowType() == WORLD_POSITION && client.getHintArrowPoint().equals(object.getWorldLocation()))
+		if (client.getHintArrowType() == WORLD_POSITION && client.getHintArrowPoint().equals(worldPoint))
+		{
 			client.clearHintArrow();
+		}
 	}
 
 	@Subscribe
